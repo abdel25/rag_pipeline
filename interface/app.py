@@ -1,7 +1,8 @@
 import streamlit as st
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter, Language
+from embedding.utils import extension_to_language
 from langchain_community.embeddings import HuggingFaceInstructEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.memory import ConversationBufferMemory
@@ -19,13 +20,13 @@ def get_pdf_text(pdf_docs):
 
 
 def get_text_chunks(text):
-    text_splitter = CharacterTextSplitter(
-        separator="\n",
+    # Split
+    code_splitter = RecursiveCharacterTextSplitter.from_language(
+        language=extension_to_language.get(".py", Language.PYTHON),
         chunk_size=1000,
         chunk_overlap=200,
-        length_function=len
     )
-    chunks = text_splitter.split_text(text)
+    chunks = code_splitter.split_documents(text)
     return chunks
 
 
@@ -36,7 +37,7 @@ def get_vectorstore(text_chunks):
 
 
 def get_conversation_chain(vectorstore):
-    llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
+    llm = HuggingFaceHub(repo_id="codellama/CodeLlama-13b-Instruct-hf", model_kwargs={"temperature":0.5, "max_length":512})
 
     memory = ConversationBufferMemory(
         memory_key='chat_history', return_messages=True)
